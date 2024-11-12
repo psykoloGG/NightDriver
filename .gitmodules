@@ -1,0 +1,3 @@
+[submodule "Plugins/BeatMapper"]
+	path = Plugins/BeatMapper
+	url = https://github.com/psykoloGG/BeatMapper
