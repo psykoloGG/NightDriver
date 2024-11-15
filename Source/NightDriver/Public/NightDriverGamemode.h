@@ -11,5 +11,7 @@ UCLASS()
 class NIGHTDRIVER_API ANightDriverGamemode : public AGameModeBase
 {
 	GENERATED_BODY()
+public:
+	ANightDriverGamemode();
 	
 };

@@ -15,4 +15,8 @@ public:
 	
 	UPROPERTY(EditAnywhere)
 	class USplineComponent* SplineComponent;
+
+	// Set which lane from the right of driving direction this spline is
+	UPROPERTY(EditAnywhere)
+	int32 Index; 
 };
