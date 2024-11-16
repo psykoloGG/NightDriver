@@ -5,6 +5,9 @@
 #include "GameFramework/Pawn.h"
 #include "CarPawn.generated.h"
 
+struct FInputActionValue;
+class UInputAction;
+class UInputMappingContext;
 class ABeatController;
 class AObstacleSpawner;
 class UObstacleSpawner;
@@ -24,7 +27,6 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 protected:
 	
 	virtual void BeginPlay() override;
@@ -36,18 +38,37 @@ private:
 	// Spawn obstacle on random spawner
 	UFUNCTION()
 	void SpawnObstacle();
-	
-	UPROPERTY(EditAnywhere, Category="Spline Follow Settings")
+
+	UFUNCTION()
+	void MoveLeftRight(const FInputActionValue& Value);
+
+	void FollowSpline(float DeltaTime);
+
+	/***  Lane following stuff ***/
 	float CurrentDistance;
+
+	// From right to left (europe) according to forward moving direction
+	int32 CurrentLaneIndex;
+	
+	bool bJustChangedLanes = false;
 
 	// Starting speed of the car
 	UPROPERTY(EditAnywhere, Category="Spline Follow Settings")
 	float CurrentSpeed = 500.0f;
 
-	UPROPERTY(EditAnywhere, Category="Spline Follow Settings")
+	UPROPERTY(VisibleAnywhere, Category="Spline Follow Settings")
 	TArray<ASplineActor*> SplineActors;
+	
 
-	// Car Mesh
+	/*** Inputs ***/
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputMappingContext* InputMappingContext;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* MoveLeftRightAction;
+	
+
+	/*** Car Visuals ***/
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* CarMeshComponent;
 

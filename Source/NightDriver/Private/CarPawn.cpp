@@ -5,6 +5,9 @@
 #include "Obstacle.h"
 #include "SplineActor.h"
 #include "Components/SplineComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "Kismet/GameplayStatics.h"
 
 ACarPawn::ACarPawn()
 {
@@ -44,6 +47,16 @@ void ACarPawn::BeginPlay()
 		return A.Index < B.Index;
 	});
 
+	if (SplineActors.Num() > 0)
+	{
+		// At beginning of the game start in middle-est lane
+		CurrentLaneIndex = SplineActors.Num() / 2.0f;
+	}
+	else 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No spline actors found"));
+	}
+
 	// Find BeatMapper and start playing music (Ideally done elsewhere)
 	for (TActorIterator<ABeatController> ActorItr(GetWorld()); ActorItr; ++ActorItr)
 	{
@@ -75,28 +88,72 @@ void ACarPawn::SpawnObstacle()
 	GetWorld()->SpawnActor<AObstacle>(AObstacle::StaticClass(), Location, Rotation)->SetObstacleMesh(Mesh);
 }
 
+void ACarPawn::MoveLeftRight(const FInputActionValue& Value)
+{
+	const float AxisValue = Value.Get<float>();
+	if (AxisValue > 0.0f)
+	{
+		if (CurrentLaneIndex == SplineActors.Num() - 1)
+		{
+			return;
+		}
+		bJustChangedLanes = true;
+		CurrentLaneIndex++;
+	}
+	
+	if (AxisValue < 0.0f)
+	{
+		if (CurrentLaneIndex == 0)
+		{
+			return;
+		}
+		bJustChangedLanes = true;
+		CurrentLaneIndex--;
+	}
+}
+
+void ACarPawn::FollowSpline(float DeltaTime)
+{
+	// Start game in the middle lane
+	CurrentDistance += CurrentSpeed * DeltaTime;
+
+	// Smooth transition into another lane if needed
+	if (bJustChangedLanes)
+	{
+		FVector CurrentLocation = GetActorLocation();
+		FVector TargetLocation = SplineActors[CurrentLaneIndex]->SplineComponent->GetLocationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World);
+		SetActorLocation(FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaTime, 5.0f));
+		if (FVector::Dist(CurrentLocation, TargetLocation) < 10.0f)
+		{
+			bJustChangedLanes = false;
+		}
+	}
+	else
+	{
+		SetActorLocation(SplineActors[CurrentLaneIndex]->SplineComponent->GetLocationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World));
+	}
+	
+	SetActorRotation(SplineActors[CurrentLaneIndex]->SplineComponent->GetRotationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World));
+	AddActorWorldRotation(FRotator(0.0f, 180.0f, 0.0f));
+}
+
 void ACarPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	// Start game in the middle lane
-	CurrentDistance += CurrentSpeed * DeltaTime;
-	if (SplineActors.Num() > 0)
-	{
-		int32 MidLaneIndex = SplineActors.Num() / 2.0f;
-		SetActorLocation(SplineActors[MidLaneIndex]->SplineComponent->GetLocationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World));
-		SetActorRotation(SplineActors[MidLaneIndex]->SplineComponent->GetRotationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World));
-		AddActorWorldRotation(FRotator(0.0f, 180.0f, 0.0f));
-	}
-	else 
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No spline actors found"));
-	}
+	FollowSpline(DeltaTime);
 }
 
 void ACarPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+	// Bind input mapping
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+	InputSubsystem->AddMappingContext(InputMappingContext, 0);
+
+	// Bind A and D to move car left and right
+	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
+	EnhancedInputComponent->BindAction(MoveLeftRightAction, ETriggerEvent::Started, this, &ACarPawn::MoveLeftRight);
 }
 
