@@ -13,10 +13,10 @@ public:
 	// Sets default values for this actor's properties
 	ASplineActor();
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	class USplineComponent* SplineComponent;
 
 	// Set which lane from the right of driving direction this spline is
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="Lane information")
 	int32 Index; 
 };

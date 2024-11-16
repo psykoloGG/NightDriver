@@ -74,7 +74,7 @@ void ACarPawn::OnBeat()
 void ACarPawn::SpawnObstacle()
 {
 	int32 SplineIndex = FMath::RandRange(0, SplineActors.Num() - 1);
-	if (ObstacleMeshes.Num() == 0)
+	if (Obstacles.Num() == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No obstacles to spawn"));
 		return;
@@ -83,9 +83,8 @@ void ACarPawn::SpawnObstacle()
 	FVector Location = SplineActors[SplineIndex]->SplineComponent->GetLocationAtDistanceAlongSpline(CurrentDistance + 1000.0f, ESplineCoordinateSpace::World);
 	FRotator Rotation = SplineActors[SplineIndex]->SplineComponent->GetRotationAtDistanceAlongSpline(CurrentDistance + 1000.0f, ESplineCoordinateSpace::World);
 
-	int32 RandIndex = FMath::RandRange(0, ObstacleMeshes.Num() - 1);
-	UStaticMesh* Mesh = ObstacleMeshes[RandIndex];
-	GetWorld()->SpawnActor<AObstacle>(AObstacle::StaticClass(), Location, Rotation)->SetObstacleMesh(Mesh);
+	int32 RandIndex = FMath::RandRange(0, Obstacles.Num() - 1);
+	GetWorld()->SpawnActor<AObstacle>(Obstacles[RandIndex], Location, Rotation);
 }
 
 void ACarPawn::MoveLeftRight(const FInputActionValue& Value)

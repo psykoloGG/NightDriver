@@ -5,6 +5,7 @@
 #include "GameFramework/Pawn.h"
 #include "CarPawn.generated.h"
 
+class AObstacle;
 struct FInputActionValue;
 class UInputAction;
 class UInputMappingContext;
@@ -79,5 +80,5 @@ private:
 	ABeatController* BeatController;
 	
 	UPROPERTY(EditAnywhere, Category="Obstacle Spawn Settings")
-	TArray<UStaticMesh*> ObstacleMeshes;
+	TArray<TSubclassOf<AObstacle>> Obstacles;
 };

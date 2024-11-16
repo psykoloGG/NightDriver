@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GeometryCollection/GeometryCollectionActor.h"
 #include "Obstacle.generated.h"
 
 UCLASS()
@@ -12,10 +13,7 @@ class NIGHTDRIVER_API AObstacle : public AActor
 public:	
 	AObstacle();
 
-	UFUNCTION()
-	void SetObstacleMesh(UStaticMesh* Mesh);
-
 private:
-	UPROPERTY(VisibleAnywhere)
-	UStaticMeshComponent* MeshComponent;
+	UPROPERTY(EditAnywhere)
+	UGeometryCollectionComponent* GeometryCollectionComponent;
 };
