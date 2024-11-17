@@ -30,6 +30,14 @@ ACarPawn::ACarPawn()
 		CarMeshComponent->SetStaticMesh(CarMeshAsset.Object);
 		CarMeshComponent->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SteeringWheelAsset(TEXT("/Script/Engine.StaticMesh'/Game/MainLevel/3D/Car/Textures/SM_CarWheel.SM_CarWheel'"));
+	if (SteeringWheelAsset.Succeeded())
+	{
+		SteeringWheelMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SteeringWheel"));
+		SteeringWheelMeshComponent->SetStaticMesh(SteeringWheelAsset.Object);
+		SteeringWheelMeshComponent->SetupAttachment(CarMeshComponent);
+	}
 }
 
 void ACarPawn::BeginPlay()
@@ -97,6 +105,7 @@ void ACarPawn::MoveLeftRight(const FInputActionValue& Value)
 			return;
 		}
 		bJustChangedLanes = true;
+		bIsTurningRight = true;
 		CurrentLaneIndex++;
 	}
 	
@@ -107,8 +116,21 @@ void ACarPawn::MoveLeftRight(const FInputActionValue& Value)
 			return;
 		}
 		bJustChangedLanes = true;
+		bIsTurningRight = false;
 		CurrentLaneIndex--;
 	}
+}
+
+void ACarPawn::LookAround(const FInputActionValue& InputActionValue)
+{
+	const FVector2D MouseAxisValue = InputActionValue.Get<FVector2D>();
+
+	// Limit horizontal movement
+	float NewPitch = GetControlRotation().Pitch + MouseAxisValue.Y;
+	float NewYaw = GetControlRotation().Yaw + MouseAxisValue.X;
+	NewYaw = FMath::ClampAngle(NewYaw, -60.0f, 60.0f);
+	GetController()->SetControlRotation(FRotator(NewPitch, NewYaw, 0.0f));
+	TimeSinceLastMove = 0.0f;
 }
 
 void ACarPawn::FollowSpline(float DeltaTime)
@@ -121,8 +143,10 @@ void ACarPawn::FollowSpline(float DeltaTime)
 	{
 		FVector CurrentLocation = GetActorLocation();
 		FVector TargetLocation = SplineActors[CurrentLaneIndex]->SplineComponent->GetLocationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World);
-		SetActorLocation(FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaTime, 5.0f));
-		if (FVector::Dist(CurrentLocation, TargetLocation) < 10.0f)
+		// This VInterp never completes for some reason
+		SetActorLocation(FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaTime, 20.0f));
+		UE_LOG(LogTemp, Warning, TEXT("Just changed lanes: %f"), FVector::Dist(CurrentLocation, TargetLocation));
+		if (FVector::Dist(CurrentLocation, TargetLocation) < 25.0f)
 		{
 			bJustChangedLanes = false;
 		}
@@ -136,23 +160,63 @@ void ACarPawn::FollowSpline(float DeltaTime)
 	AddActorWorldRotation(FRotator(0.0f, 180.0f, 0.0f));
 }
 
+void ACarPawn::ControlCameraRotation(float DeltaTime)
+{
+	TimeSinceLastMove += DeltaTime;
+
+	// Rotate camera gently do default rotation
+	if (TimeSinceLastMove > TimeUntilCameraReset && GetController()->GetControlRotation() != DefaultCameraRotation)
+	{
+		FRotator NewRotation = FMath::RInterpTo(GetController()->GetControlRotation(), DefaultCameraRotation, DeltaTime, 5.0f);
+		GetController()->SetControlRotation(NewRotation);
+	}
+}
+
+void ACarPawn::SpinSteeringWheel(float DeltaTime)
+{
+	if (bJustChangedLanes)
+	{
+		if (bIsTurningRight)
+		{
+			FRotator NewRotation = FMath::RInterpTo(SteeringWheelMeshComponent->GetRelativeRotation(), FRotator(SteeringWheelMeshComponent->GetRelativeRotation().Pitch, SteeringWheelMeshComponent->GetRelativeRotation().Yaw, 45.0f), DeltaTime, 5.0f);
+			SteeringWheelMeshComponent->SetRelativeRotation(NewRotation);
+		}
+		else
+		{
+			FRotator NewRotation = FMath::RInterpTo(SteeringWheelMeshComponent->GetRelativeRotation(), FRotator(SteeringWheelMeshComponent->GetRelativeRotation().Pitch, SteeringWheelMeshComponent->GetRelativeRotation().Yaw, -45.0f), DeltaTime, 5.0f);
+			SteeringWheelMeshComponent->SetRelativeRotation(NewRotation);
+		}
+	}
+	else
+	{
+		FRotator NewRotation = FMath::RInterpTo(SteeringWheelMeshComponent->GetRelativeRotation(), FRotator(SteeringWheelMeshComponent->GetRelativeRotation().Pitch, SteeringWheelMeshComponent->GetRelativeRotation().Yaw, 0.0f), DeltaTime, 5.0f);
+		SteeringWheelMeshComponent->SetRelativeRotation(NewRotation);
+	}
+}
+
 void ACarPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	FollowSpline(DeltaTime);
+	ControlCameraRotation(DeltaTime);
+	SpinSteeringWheel(DeltaTime);
 }
 
 void ACarPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 
 	// Bind input mapping
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	AddControllerYawInput(180.0f);
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
 	InputSubsystem->AddMappingContext(InputMappingContext, 0);
 
 	// Bind A and D to move car left and right
-	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 	EnhancedInputComponent->BindAction(MoveLeftRightAction, ETriggerEvent::Started, this, &ACarPawn::MoveLeftRight);
+
+	// Bind mouse movement to look around
+	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACarPawn::LookAround);
 }
 

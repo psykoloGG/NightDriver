@@ -43,7 +43,14 @@ private:
 	UFUNCTION()
 	void MoveLeftRight(const FInputActionValue& Value);
 
+	UFUNCTION()
+	void LookAround(const FInputActionValue& InputActionValue);
+
 	void FollowSpline(float DeltaTime);
+
+	void ControlCameraRotation(float DeltaTime);
+
+	void SpinSteeringWheel(float DeltaTime);
 
 	/***  Lane following stuff ***/
 	float CurrentDistance;
@@ -67,7 +74,18 @@ private:
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MoveLeftRightAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* LookAction;
 	
+	// Default camera rotation to return to
+	UPROPERTY(EditAnywhere, Category="Input")
+	FRotator DefaultCameraRotation = FRotator(0.0f, 0.0f, 0.0f);
+	
+	float TimeSinceLastMove = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	float TimeUntilCameraReset = 3.0f;
 
 	/*** Car Visuals ***/
 	UPROPERTY(VisibleAnywhere)
@@ -76,6 +94,12 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* CameraComponent;
 
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* SteeringWheelMeshComponent;
+
+	bool bIsTurningRight = false;
+
+	/*** Obstacle Spawning ***/
 	UPROPERTY(VisibleAnywhere)
 	ABeatController* BeatController;
 	
