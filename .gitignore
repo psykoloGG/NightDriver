@@ -2,6 +2,8 @@
 .vs/
 .idea/
 .vscode/
+.Release/
+.packaged/
 
 # Compiled Object files
 *.slo
