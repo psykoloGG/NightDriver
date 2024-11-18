@@ -8,6 +8,6 @@ public class NightDriver : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "BeatMapper", "EnhancedInput", "GeometryCollectionEngine" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "BeatMapper", "EnhancedInput", "GeometryCollectionEngine", "UMG" });
 	}
 }

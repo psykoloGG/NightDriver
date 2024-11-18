@@ -5,6 +5,12 @@
 #include "GameFramework/Pawn.h"
 #include "CarPawn.generated.h"
 
+class UBoxComponent;
+class UCrosshairWidget;
+class UMainHUD;
+class UCarDashComponent;
+class UQuickTimeEvent;
+class USpotLightComponent;
 class AObstacle;
 struct FInputActionValue;
 class UInputAction;
@@ -13,6 +19,7 @@ class ABeatController;
 class AObstacleSpawner;
 class UObstacleSpawner;
 class ASplineActor;
+class UQuickTimeEventWidget;
 /**
 * Main Character Car class
 */
@@ -27,9 +34,10 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+	void Interact();
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 protected:
-	
+	UFUNCTION()
 	virtual void BeginPlay() override;
 
 private:
@@ -52,6 +60,36 @@ private:
 
 	void SpinSteeringWheel(float DeltaTime);
 
+	UFUNCTION()
+	void LightsQuicktimeEvent(UQuickTimeEvent* QuickTimeEvent);
+
+	UFUNCTION()
+	void QuicktimeEventFailed(UQuickTimeEvent* QuickTimeEvent);
+
+	UFUNCTION()
+	void ToggleLights();
+
+	UFUNCTION()
+	void OnObstacleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnDeletionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void TakeDamage();
+
+	UFUNCTION()
+	void ToggleWipers();
+	
+	UPROPERTY(EditAnywhere)
+	UQuickTimeEventWidget* QuickTimeEventWidget;
+
+	UPROPERTY(EditAnywhere)
+	UMainHUD* MainHUD;
+
+	UPROPERTY(EditAnywhere)
+	UCrosshairWidget* CrosshairWidget;
+
 	/***  Lane following stuff ***/
 	float CurrentDistance;
 
@@ -62,11 +100,10 @@ private:
 
 	// Starting speed of the car
 	UPROPERTY(EditAnywhere, Category="Spline Follow Settings")
-	float CurrentSpeed = 500.0f;
+	float CurrentSpeed = 2000.0f;
 
 	UPROPERTY(VisibleAnywhere, Category="Spline Follow Settings")
 	TArray<ASplineActor*> SplineActors;
-	
 
 	/*** Inputs ***/
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -77,6 +114,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* LookAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* InteractAction;
 	
 	// Default camera rotation to return to
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -99,10 +139,43 @@ private:
 
 	bool bIsTurningRight = false;
 
+	UPROPERTY(VisibleAnywhere)
+	bool bAreLightsOn = false;
+	
+	UPROPERTY(VisibleAnywhere)
+	bool bAreWipersOn = false;
+	
+	UPROPERTY(VisibleAnywhere)
+	USpotLightComponent* LeftSpotLight;
+
+	UPROPERTY(VisibleAnywhere)
+	USpotLightComponent* RightSpotLight;
+
+	UPROPERTY(VisibleAnywhere)
+	UCarDashComponent* HeadlightsButton;
+
+	UPROPERTY(VisibleAnywhere)
+	UCarDashComponent* WiperLever;
+
 	/*** Obstacle Spawning ***/
 	UPROPERTY(VisibleAnywhere)
 	ABeatController* BeatController;
 	
 	UPROPERTY(EditAnywhere, Category="Obstacle Spawn Settings")
 	TArray<TSubclassOf<AObstacle>> Obstacles;
+
+	UPROPERTY(VisibleAnywhere)
+	UBoxComponent* ObstacleDetectionVolume;
+
+	UPROPERTY(VisibleAnywhere)
+	UBoxComponent* ObstacleDeletionVolume;
+
+	UPROPERTY()
+	bool bShouldSpawnObstacles = true;
+
+	/*** Player Information ***/
+	
+	// Start with 4 hearts
+	UPROPERTY(VisibleAnywhere)
+	int32 Health = 4;
 };
